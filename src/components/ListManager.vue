@@ -1,12 +1,13 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
-import { Save, Plus, Trash2 } from 'lucide-vue-next'
+import { Save, Plus, Trash2, Share2 } from 'lucide-vue-next'
 import Button from '@/components/ui/Button.vue'
 import Card from '@/components/ui/Card.vue'
 import Input from '@/components/ui/Input.vue'
 import Textarea from '@/components/ui/Textarea.vue'
 import Badge from '@/components/ui/Badge.vue'
 import Dialog from '@/components/ui/Dialog.vue'
+import ShareDialog from '@/components/ShareDialog.vue'
 import { getAllRosters, saveRoster, deleteRoster, parseMembers } from '@/lib/db'
 
 const props = defineProps({
@@ -19,6 +20,7 @@ const rosters = ref([])
 const selectedId = ref(null)
 const saving = ref(false)
 const confirmDeleteOpen = ref(false)
+const shareOpen = ref(false)
 
 const parsedNames = computed(() => parseMembers(props.membersText))
 
@@ -145,11 +147,21 @@ async function confirmDelete() {
         <Save class="size-3.5" />
         {{ selectedId ? '수정 저장' : '새 명단 저장' }}
       </Button>
+      <Button
+        variant="outline"
+        :disabled="parsedNames.length === 0"
+        @click="shareOpen = true"
+      >
+        <Share2 class="size-3.5" />
+        공유
+      </Button>
       <Button v-if="selectedId" variant="outline" size="icon" @click="confirmDeleteOpen = true">
         <Trash2 class="size-3.5" />
       </Button>
     </div>
   </Card>
+
+  <ShareDialog v-model:open="shareOpen" :name="name" :members-text="membersText" />
 
   <Dialog v-model:open="confirmDeleteOpen">
     <template #default>
