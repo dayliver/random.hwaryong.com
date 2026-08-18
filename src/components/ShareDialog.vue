@@ -1,7 +1,7 @@
 <script setup>
 import { ref, computed, watch, nextTick } from 'vue'
 import QRCode from 'qrcode'
-import { Copy, Check } from 'lucide-vue-next'
+import { Copy, Check, Share2 } from 'lucide-vue-next'
 import Dialog from '@/components/ui/Dialog.vue'
 import Button from '@/components/ui/Button.vue'
 import Input from '@/components/ui/Input.vue'
@@ -52,6 +52,24 @@ async function copyUrl() {
     // clipboard API may be unavailable - the input is still selectable for manual copy
   }
 }
+
+// Opens the OS share sheet (Mail, KakaoTalk, Messages, AirDrop, ...) so the
+// link can go out through whatever app the user actually wants - not every
+// browser supports it, so it's offered alongside the QR/copy fallbacks
+// rather than replacing them.
+const canNativeShare = typeof navigator !== 'undefined' && typeof navigator.share === 'function'
+
+async function nativeShare() {
+  try {
+    await navigator.share({
+      title: props.name ? `${props.name} 명단 공유` : '랜덤 셀렉터 명단 공유',
+      text: props.name ? `'${props.name}' 명단을 공유해요.` : '명단을 공유해요.',
+      url: shareUrl.value,
+    })
+  } catch {
+    // user cancelled the share sheet, or the platform rejected it - nothing to do
+  }
+}
 </script>
 
 <template>
@@ -70,6 +88,11 @@ async function copyUrl() {
         <canvas ref="canvasRef" class="h-auto w-full" />
       </div>
 
+      <Button v-if="canNativeShare" class="w-full" @click="nativeShare">
+        <Share2 class="size-3.5" />
+        메일·카카오톡 등으로 공유하기
+      </Button>
+
       <div class="flex w-full items-center gap-2">
         <Input :model-value="shareUrl" readonly class="text-xs" @focus="$event.target.select()" />
         <Button variant="outline" size="icon" @click="copyUrl">
@@ -78,7 +101,9 @@ async function copyUrl() {
         </Button>
       </div>
 
-      <Button class="w-full" @click="$emit('update:open', false)">닫기</Button>
+      <Button :variant="canNativeShare ? 'outline' : 'default'" class="w-full" @click="$emit('update:open', false)">
+        닫기
+      </Button>
     </div>
   </Dialog>
 </template>
