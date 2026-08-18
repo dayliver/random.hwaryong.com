@@ -39,6 +39,30 @@ function easeSteps(totalSteps) {
   return delays
 }
 
+// Mixes three kinds of moves so the shuffle reads as more than "swap neighbors":
+// adjacent swaps, far-apart "column" swaps, and the occasional full/partial reversal.
+function randomStep(arr) {
+  const n = arr.length
+  const next = arr.slice()
+  const roll = Math.random()
+
+  if (roll < 0.12 && n > 2) {
+    const i = Math.floor(Math.random() * (n - 1))
+    const j = i + 1 + Math.floor(Math.random() * (n - i - 1))
+    const reversed = next.slice(i, j + 1).reverse()
+    next.splice(i, reversed.length, ...reversed)
+  } else if (roll < 0.56) {
+    const i = Math.floor(Math.random() * (n - 1))
+    ;[next[i], next[i + 1]] = [next[i + 1], next[i]]
+  } else {
+    const i = Math.floor(Math.random() * n)
+    let j = Math.floor(Math.random() * n)
+    while (j === i) j = Math.floor(Math.random() * n)
+    ;[next[i], next[j]] = [next[j], next[i]]
+  }
+  return next
+}
+
 async function play() {
   if (spinning.value || props.names.length < 2) return
   spinning.value = true
@@ -50,10 +74,7 @@ async function play() {
   const delays = easeSteps(totalSteps)
 
   for (const delay of delays) {
-    const i = Math.floor(Math.random() * (n - 1))
-    const arr = cards.value.slice()
-    ;[arr[i], arr[i + 1]] = [arr[i + 1], arr[i]]
-    cards.value = arr
+    cards.value = randomStep(cards.value)
     await sleep(delay)
   }
 
@@ -68,17 +89,17 @@ async function play() {
     <p class="text-xs text-muted-foreground">
       카드들이 계속 자리를 바꾸다가 점점 느려지며 멈춰요. 맨 왼쪽 칸에 남은 이름이 당첨이에요.
     </p>
-    <div class="min-h-24 w-full rounded-lg border border-border bg-card p-4">
-      <TransitionGroup name="sort" tag="div" class="flex flex-wrap justify-center gap-2">
+    <div class="min-h-40 w-full rounded-lg border border-border bg-card p-4 sm:min-h-48 sm:p-6">
+      <TransitionGroup name="sort" tag="div" class="flex flex-wrap justify-center gap-3 sm:gap-4">
         <div
           v-for="(card, idx) in cards"
           :key="card.id"
-          class="sort-card flex h-12 min-w-16 items-center justify-center rounded-md border px-3 text-sm font-semibold"
+          class="sort-card flex h-20 min-w-24 items-center justify-center rounded-xl border-2 px-5 text-2xl font-extrabold sm:h-24 sm:min-w-32 sm:px-7 sm:text-4xl"
           :class="[
             idx === 0
               ? 'border-primary bg-primary/10 text-primary'
               : 'border-border bg-secondary text-secondary-foreground',
-            winnerId === card.id ? 'animate-pop-in ring-2 ring-primary' : '',
+            winnerId === card.id ? 'animate-pop-in ring-4 ring-primary' : '',
           ]"
         >
           {{ card.name }}

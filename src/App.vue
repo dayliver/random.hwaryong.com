@@ -1,6 +1,6 @@
 <script setup>
-import { ref, computed, watch, onMounted } from 'vue'
-import { Dices, RotateCcw, Sun, Moon, Trophy, History, Trash2 } from 'lucide-vue-next'
+import { ref, computed, watch, onMounted, onBeforeUnmount } from 'vue'
+import { Dices, RotateCcw, Sun, Moon, Trophy, History, Trash2, Maximize, Minimize, X } from 'lucide-vue-next'
 import ListManager from '@/components/ListManager.vue'
 import WheelSpin from '@/components/modes/WheelSpin.vue'
 import SlotMachine from '@/components/modes/SlotMachine.vue'
@@ -88,6 +88,35 @@ function toggleDark() {
   document.documentElement.classList.toggle('dark', isDark.value)
   localStorage.setItem('theme', isDark.value ? 'dark' : 'light')
 }
+
+const isFullscreen = ref(false)
+const showFullscreenHint = ref(false)
+function updateFullscreenState() {
+  isFullscreen.value = !!document.fullscreenElement
+}
+async function toggleFullscreen() {
+  try {
+    if (document.fullscreenElement) {
+      await document.exitFullscreen()
+    } else {
+      await document.documentElement.requestFullscreen()
+    }
+  } catch {
+    // fullscreen may be blocked (e.g. embedded iframe) - ignore
+  }
+}
+async function acceptFullscreenHint() {
+  showFullscreenHint.value = false
+  await toggleFullscreen()
+}
+onMounted(() => {
+  updateFullscreenState()
+  document.addEventListener('fullscreenchange', updateFullscreenState)
+  if (!document.fullscreenElement) showFullscreenHint.value = true
+})
+onBeforeUnmount(() => {
+  document.removeEventListener('fullscreenchange', updateFullscreenState)
+})
 </script>
 
 <template>
@@ -102,11 +131,37 @@ function toggleDark() {
           <p class="text-xs text-muted-foreground">명단을 저장하고, 룰렛·슬롯·사다리·정렬로 랜덤 추첨하세요</p>
         </div>
       </div>
-      <Button variant="outline" size="icon" @click="toggleDark">
-        <Sun v-if="isDark" class="size-4" />
-        <Moon v-else class="size-4" />
-      </Button>
+      <div class="flex items-center gap-2">
+        <Button variant="outline" size="icon" @click="toggleFullscreen">
+          <Minimize v-if="isFullscreen" class="size-4" />
+          <Maximize v-else class="size-4" />
+        </Button>
+        <Button variant="outline" size="icon" @click="toggleDark">
+          <Sun v-if="isDark" class="size-4" />
+          <Moon v-else class="size-4" />
+        </Button>
+      </div>
     </header>
+
+    <div
+      v-if="showFullscreenHint && !isFullscreen"
+      class="mb-6 flex items-center justify-between gap-3 rounded-lg border border-primary/30 bg-primary/5 px-4 py-3 text-sm"
+    >
+      <span class="text-foreground">전체화면으로 보면 룰렛·슬롯머신이 훨씬 크고 실감나게 보여요.</span>
+      <div class="flex shrink-0 items-center gap-2">
+        <Button size="sm" @click="acceptFullscreenHint">
+          <Maximize class="size-3.5" />
+          전체화면으로 보기
+        </Button>
+        <button
+          type="button"
+          class="text-muted-foreground hover:text-foreground"
+          @click="showFullscreenHint = false"
+        >
+          <X class="size-4" />
+        </button>
+      </div>
+    </div>
 
     <div class="mb-6 flex gap-1.5 rounded-lg bg-muted p-1 lg:hidden">
       <button
