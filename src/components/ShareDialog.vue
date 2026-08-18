@@ -54,7 +54,9 @@ async function copyUrl() {
       <div>
         <h3 class="text-base font-semibold">명단 공유</h3>
         <p class="mt-1 text-sm text-muted-foreground">
-          모바일에서 QR을 스캔하면 이 명단이 그대로 열려요.
+          모바일에서 QR을 스캔하면
+          <span v-if="name" class="font-medium text-foreground">'{{ name }}'</span>
+          명단이 그대로 열려요.
         </p>
       </div>
 

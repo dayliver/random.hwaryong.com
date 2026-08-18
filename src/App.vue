@@ -13,8 +13,26 @@ import Dialog from '@/components/ui/Dialog.vue'
 import { parseMembers } from '@/lib/db'
 import { decodeRoster, readSharedRosterCode, clearSharedRosterFromUrl } from '@/lib/share'
 
-const rosterName = ref('')
-const membersText = ref('홍길동\n임꺽정\n장길산\n전우치\n일지매')
+const LAST_ROSTER_KEY = 'random-selector:last-roster'
+const DEFAULT_ROSTER = { name: '', membersText: '홍길동\n임꺽정\n장길산\n전우치\n일지매' }
+
+function loadLastRoster() {
+  try {
+    const parsed = JSON.parse(localStorage.getItem(LAST_ROSTER_KEY))
+    if (typeof parsed?.membersText === 'string') return parsed
+  } catch {
+    // ignore malformed/missing storage
+  }
+  return null
+}
+
+const lastRoster = loadLastRoster()
+const rosterName = ref(lastRoster?.name ?? DEFAULT_ROSTER.name)
+const membersText = ref(lastRoster?.membersText ?? DEFAULT_ROSTER.membersText)
+
+watch([rosterName, membersText], ([n, m]) => {
+  localStorage.setItem(LAST_ROSTER_KEY, JSON.stringify({ name: n, membersText: m }))
+})
 
 const names = computed(() => parseMembers(membersText.value))
 const pool = ref([...names.value])

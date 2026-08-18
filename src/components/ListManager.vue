@@ -21,6 +21,7 @@ const selectedId = ref(null)
 const saving = ref(false)
 const confirmDeleteOpen = ref(false)
 const shareOpen = ref(false)
+const shareTarget = ref(null)
 
 const parsedNames = computed(() => parseMembers(props.membersText))
 
@@ -28,7 +29,23 @@ async function refresh() {
   rosters.value = await getAllRosters()
 }
 
-onMounted(refresh)
+onMounted(async () => {
+  await refresh()
+  // Reselect whichever saved roster matches what's currently loaded (e.g.
+  // restored from last session) so the chip highlights and saving updates
+  // it in place instead of creating a duplicate.
+  if (selectedId.value === null) {
+    const match = rosters.value.find(
+      (r) => r.name === props.name && r.membersText === props.membersText,
+    )
+    if (match) selectedId.value = match.id
+  }
+})
+
+function openShare(roster) {
+  shareTarget.value = roster
+  shareOpen.value = true
+}
 
 function selectRoster(roster) {
   selectedId.value = roster.id
@@ -87,21 +104,41 @@ async function confirmDelete() {
     </div>
 
     <div v-if="rosters.length" class="flex flex-wrap gap-1.5">
-      <button
+      <div
         v-for="roster in rosters"
         :key="roster.id"
-        type="button"
-        @click="selectRoster(roster)"
         :class="[
-          'rounded-md border px-2.5 py-1 text-xs transition-colors',
+          'flex items-stretch overflow-hidden rounded-md border text-xs transition-colors',
           selectedId === roster.id
             ? 'border-primary bg-primary text-primary-foreground'
-            : 'border-input bg-background hover:bg-accent hover:text-accent-foreground',
+            : 'border-input bg-background',
         ]"
       >
-        {{ roster.name }}
-        <span class="opacity-60">· {{ roster.members.length }}</span>
-      </button>
+        <button
+          type="button"
+          @click="selectRoster(roster)"
+          :class="[
+            'px-2.5 py-1 transition-colors',
+            selectedId === roster.id ? '' : 'hover:bg-accent hover:text-accent-foreground',
+          ]"
+        >
+          {{ roster.name }}
+          <span class="opacity-60">· {{ roster.members.length }}</span>
+        </button>
+        <button
+          type="button"
+          title="이 명단 공유"
+          @click="openShare(roster)"
+          :class="[
+            'flex items-center border-l px-1.5 transition-colors',
+            selectedId === roster.id
+              ? 'border-primary-foreground/30 hover:bg-black/10'
+              : 'border-input hover:bg-accent hover:text-accent-foreground',
+          ]"
+        >
+          <Share2 class="size-3" />
+        </button>
+      </div>
     </div>
     <p v-else class="text-xs text-muted-foreground">
       저장된 명단이 없어요. 아래에 이름을 입력하고 저장해보세요.
@@ -147,21 +184,20 @@ async function confirmDelete() {
         <Save class="size-3.5" />
         {{ selectedId ? '수정 저장' : '새 명단 저장' }}
       </Button>
-      <Button
-        variant="outline"
-        :disabled="parsedNames.length === 0"
-        @click="shareOpen = true"
-      >
-        <Share2 class="size-3.5" />
-        공유
-      </Button>
       <Button v-if="selectedId" variant="outline" size="icon" @click="confirmDeleteOpen = true">
         <Trash2 class="size-3.5" />
       </Button>
     </div>
+    <p class="text-xs text-muted-foreground">
+      명단을 저장한 뒤, 위 목록에서 <Share2 class="inline size-3 -translate-y-px" /> 아이콘을 누르면 공유할 수 있어요.
+    </p>
   </Card>
 
-  <ShareDialog v-model:open="shareOpen" :name="name" :members-text="membersText" />
+  <ShareDialog
+    v-model:open="shareOpen"
+    :name="shareTarget?.name ?? ''"
+    :members-text="shareTarget?.membersText ?? ''"
+  />
 
   <Dialog v-model:open="confirmDeleteOpen">
     <template #default>
