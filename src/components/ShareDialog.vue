@@ -23,11 +23,17 @@ async function renderQr() {
   await nextTick()
   if (!canvasRef.value) return
   await QRCode.toCanvas(canvasRef.value, shareUrl.value, {
-    width: 260,
+    width: 420,
     margin: 4,
     errorCorrectionLevel: 'H',
     color: { dark: '#18181b', light: '#ffffff' },
   })
+  // The qrcode lib sets inline width/height styles matching the pixel
+  // buffer, which outrank the Tailwind classes below and block the QR
+  // from shrinking to fit narrow screens. Clear them so `h-auto w-full`
+  // (in the template) takes over for responsive display sizing.
+  canvasRef.value.style.removeProperty('width')
+  canvasRef.value.style.removeProperty('height')
 }
 
 watch([() => props.open, shareUrl], ([isOpen]) => {
@@ -49,8 +55,8 @@ async function copyUrl() {
 </script>
 
 <template>
-  <Dialog :open="open" @update:open="$emit('update:open', $event)">
-    <div class="flex flex-col items-center gap-4 text-center">
+  <Dialog :open="open" class="max-w-lg min-w-0" @update:open="$emit('update:open', $event)">
+    <div class="flex min-w-0 w-full flex-col items-center gap-4 text-center">
       <div>
         <h3 class="text-base font-semibold">명단 공유</h3>
         <p class="mt-1 text-sm text-muted-foreground">
@@ -60,8 +66,8 @@ async function copyUrl() {
         </p>
       </div>
 
-      <div class="rounded-xl border border-border bg-white p-3">
-        <canvas ref="canvasRef" />
+      <div class="w-full min-w-0 max-w-[420px] rounded-xl border border-border bg-white p-3">
+        <canvas ref="canvasRef" class="h-auto w-full" />
       </div>
 
       <div class="flex w-full items-center gap-2">
