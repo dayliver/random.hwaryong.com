@@ -11,7 +11,7 @@ import Button from '@/components/ui/Button.vue'
 import Badge from '@/components/ui/Badge.vue'
 import Dialog from '@/components/ui/Dialog.vue'
 import { parseMembers } from '@/lib/db'
-import { decodeRoster } from '@/lib/share'
+import { decodeRoster, readSharedRosterCode, clearSharedRosterFromUrl } from '@/lib/share'
 
 const rosterName = ref('')
 const membersText = ref('홍길동\n임꺽정\n장길산\n전우치\n일지매')
@@ -72,32 +72,36 @@ function clearHistory() {
 
 const notice = ref(null)
 let noticeTimer = null
-function handleNotify(payload) {
+function handleNotify(payload, duration = 2600) {
   notice.value = payload
   clearTimeout(noticeTimer)
-  noticeTimer = setTimeout(() => (notice.value = null), 2600)
+  noticeTimer = setTimeout(() => (notice.value = null), duration)
 }
 
 onMounted(() => {
-  const shared = new URLSearchParams(window.location.search).get('g')
+  const shared = readSharedRosterCode()
   if (!shared) return
   try {
     const roster = decodeRoster(shared)
     rosterName.value = roster.name
     membersText.value = roster.membersText
     const count = parseMembers(roster.membersText).length
-    handleNotify({
-      type: 'success',
-      message: roster.name
-        ? `공유된 명단 '${roster.name}'(${count}명)을 불러왔어요.`
-        : `공유된 명단(${count}명)을 불러왔어요.`,
-    })
+    handleNotify(
+      {
+        type: 'success',
+        message: roster.name
+          ? `공유된 명단 '${roster.name}'(${count}명)을 불러왔어요.`
+          : `공유된 명단(${count}명)을 불러왔어요.`,
+      },
+      5000,
+    )
   } catch {
-    handleNotify({ type: 'error', message: '공유 링크를 읽을 수 없어요.' })
+    handleNotify(
+      { type: 'error', message: 'QR/링크를 다시 스캔해보세요 - 명단 정보를 읽지 못했어요.' },
+      6000,
+    )
   } finally {
-    const url = new URL(window.location.href)
-    url.searchParams.delete('g')
-    window.history.replaceState(null, '', url.toString())
+    clearSharedRosterFromUrl()
   }
 })
 

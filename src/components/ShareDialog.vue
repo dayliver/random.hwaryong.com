@@ -23,8 +23,9 @@ async function renderQr() {
   await nextTick()
   if (!canvasRef.value) return
   await QRCode.toCanvas(canvasRef.value, shareUrl.value, {
-    width: 240,
-    margin: 1,
+    width: 260,
+    margin: 4,
+    errorCorrectionLevel: 'H',
     color: { dark: '#18181b', light: '#ffffff' },
   })
 }
