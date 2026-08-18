@@ -36,6 +36,13 @@ const activeComponent = computed(
   () => modes.find((m) => m.key === activeMode.value)?.component,
 )
 
+const mobilePanels = [
+  { key: 'list', label: '명단' },
+  { key: 'draw', label: '뽑기' },
+  { key: 'status', label: '현황' },
+]
+const mobilePanel = ref('draw')
+
 const winner = ref('')
 const winnerDialogOpen = ref(false)
 const history = ref([])
@@ -84,7 +91,7 @@ function toggleDark() {
 </script>
 
 <template>
-  <div class="mx-auto min-h-screen max-w-6xl px-4 py-8 sm:px-6 lg:px-8">
+  <div class="mx-auto min-h-screen max-w-6xl px-4 py-8 sm:px-6 lg:px-8 xl:max-w-[1600px] 2xl:max-w-[1800px]">
     <header class="mb-8 flex items-center justify-between">
       <div class="flex items-center gap-3">
         <div class="flex size-10 items-center justify-center rounded-xl bg-primary text-primary-foreground">
@@ -101,8 +108,30 @@ function toggleDark() {
       </Button>
     </header>
 
-    <div class="grid grid-cols-1 gap-6 lg:grid-cols-3">
-      <div class="lg:col-span-1">
+    <div class="mb-6 flex gap-1.5 rounded-lg bg-muted p-1 lg:hidden">
+      <button
+        v-for="panel in mobilePanels"
+        :key="panel.key"
+        type="button"
+        @click="mobilePanel = panel.key"
+        :class="[
+          'flex-1 rounded-md px-3 py-1.5 text-sm font-medium transition-colors',
+          mobilePanel === panel.key
+            ? 'bg-background text-foreground shadow-sm'
+            : 'text-muted-foreground hover:text-foreground',
+        ]"
+      >
+        {{ panel.label }}
+      </button>
+    </div>
+
+    <div class="grid grid-cols-1 gap-6 lg:grid-cols-3 xl:grid-cols-12 xl:gap-8">
+      <div
+        :class="[
+          mobilePanel === 'list' ? 'block' : 'hidden',
+          'lg:col-start-1 lg:col-end-2 lg:block xl:col-start-1 xl:col-end-4',
+        ]"
+      >
         <ListManager
           v-model:name="rosterName"
           v-model:members-text="membersText"
@@ -110,16 +139,21 @@ function toggleDark() {
         />
       </div>
 
-      <div class="flex flex-col gap-6 lg:col-span-2">
-        <Card class="p-5">
-          <div class="mb-5 flex flex-wrap gap-1.5 rounded-lg bg-muted p-1">
+      <div
+        :class="[
+          mobilePanel === 'draw' ? 'block' : 'hidden',
+          'lg:col-start-2 lg:col-end-4 lg:block xl:col-start-4 xl:col-end-10',
+        ]"
+      >
+        <Card class="p-5 xl:p-7">
+          <div class="mb-5 flex gap-1.5 overflow-x-auto rounded-lg bg-muted p-1">
             <button
               v-for="mode in modes"
               :key="mode.key"
               type="button"
               @click="activeMode = mode.key"
               :class="[
-                'flex-1 rounded-md px-3 py-1.5 text-sm font-medium transition-colors',
+                'min-w-[76px] flex-1 shrink-0 whitespace-nowrap rounded-md px-3 py-1.5 text-sm font-medium transition-colors',
                 activeMode === mode.key
                   ? 'bg-background text-foreground shadow-sm'
                   : 'text-muted-foreground hover:text-foreground',
@@ -131,37 +165,42 @@ function toggleDark() {
 
           <component :is="activeComponent" :names="pool" @winner="handleWinner" />
         </Card>
+      </div>
 
+      <div
+        :class="[
+          mobilePanel === 'status' ? 'flex' : 'hidden',
+          'flex-col gap-6 lg:col-start-2 lg:col-end-4 lg:flex xl:col-start-10 xl:col-end-13',
+        ]"
+      >
         <Card class="flex flex-col gap-3 p-5">
           <div class="flex items-center justify-between">
             <h2 class="text-sm font-semibold">추첨 대상 ({{ pool.length }}/{{ names.length }})</h2>
-            <div class="flex items-center gap-3">
-              <button
-                type="button"
-                class="flex items-center gap-2 text-xs font-medium text-muted-foreground"
-                @click="noRepeat = !noRepeat"
-              >
-                뽑히면 제외
-                <span
-                  :class="[
-                    'relative inline-flex h-5 w-9 items-center rounded-full transition-colors',
-                    noRepeat ? 'bg-primary' : 'bg-input',
-                  ]"
-                >
-                  <span
-                    :class="[
-                      'inline-block size-3.5 rounded-full bg-background shadow transition-transform',
-                      noRepeat ? 'translate-x-[18px]' : 'translate-x-1',
-                    ]"
-                  />
-                </span>
-              </button>
-              <Button variant="ghost" size="sm" @click="refillPool" :disabled="excludedCount === 0">
-                <RotateCcw class="size-3.5" />
-                다시 채우기
-              </Button>
-            </div>
+            <Button variant="ghost" size="sm" @click="refillPool" :disabled="excludedCount === 0">
+              <RotateCcw class="size-3.5" />
+              다시 채우기
+            </Button>
           </div>
+          <button
+            type="button"
+            class="flex w-fit items-center gap-2 text-xs font-medium text-muted-foreground"
+            @click="noRepeat = !noRepeat"
+          >
+            뽑히면 제외
+            <span
+              :class="[
+                'relative inline-flex h-5 w-9 items-center rounded-full transition-colors',
+                noRepeat ? 'bg-primary' : 'bg-input',
+              ]"
+            >
+              <span
+                :class="[
+                  'inline-block size-3.5 rounded-full bg-background shadow transition-transform',
+                  noRepeat ? 'translate-x-[18px]' : 'translate-x-1',
+                ]"
+              />
+            </span>
+          </button>
           <div class="flex flex-wrap gap-1.5">
             <Badge v-for="n in names" :key="n" :variant="pool.includes(n) ? 'secondary' : 'outline'"
               :class="pool.includes(n) ? '' : 'text-muted-foreground line-through opacity-50'"
@@ -188,7 +227,7 @@ function toggleDark() {
               지우기
             </Button>
           </div>
-          <ul class="flex max-h-40 flex-col gap-1.5 overflow-y-auto text-sm">
+          <ul class="flex max-h-40 flex-col gap-1.5 overflow-y-auto text-sm xl:max-h-[28rem]">
             <li
               v-for="(item, idx) in history"
               :key="idx"

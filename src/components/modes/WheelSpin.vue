@@ -1,5 +1,5 @@
 <script setup>
-import { ref, computed, watch, onMounted, nextTick } from 'vue'
+import { ref, watch, onMounted, onBeforeUnmount, nextTick } from 'vue'
 import { Play } from 'lucide-vue-next'
 import Button from '@/components/ui/Button.vue'
 
@@ -22,7 +22,8 @@ const COLORS = [
 ]
 
 const canvasRef = ref(null)
-const size = 320
+const measureRef = ref(null)
+const size = ref(320)
 const rotation = ref(0)
 const spinning = ref(false)
 const transitionEnabled = ref(false)
@@ -32,8 +33,8 @@ function draw() {
   if (!canvas) return
   const ctx = canvas.getContext('2d')
   const n = props.names.length
-  const r = size / 2
-  ctx.clearRect(0, 0, size, size)
+  const r = size.value / 2
+  ctx.clearRect(0, 0, size.value, size.value)
   if (n === 0) return
 
   const sliceAngle = (Math.PI * 2) / n
@@ -56,7 +57,8 @@ function draw() {
     ctx.textAlign = 'right'
     ctx.textBaseline = 'middle'
     ctx.fillStyle = '#fff'
-    ctx.font = '600 14px system-ui, sans-serif'
+    const fontSize = Math.max(12, Math.round(size.value / 22))
+    ctx.font = `600 ${fontSize}px system-ui, sans-serif`
     const label =
       props.names[i].length > 8 ? props.names[i].slice(0, 7) + '…' : props.names[i]
     ctx.fillText(label, r - 16, 0)
@@ -65,7 +67,19 @@ function draw() {
 }
 
 watch(() => props.names, () => nextTick(draw), { deep: true })
-onMounted(draw)
+
+let resizeObserver
+onMounted(() => {
+  draw()
+  resizeObserver = new ResizeObserver((entries) => {
+    const width = entries[0]?.contentRect.width
+    if (!width) return
+    size.value = Math.round(Math.max(240, Math.min(560, width)))
+    nextTick(draw)
+  })
+  if (measureRef.value) resizeObserver.observe(measureRef.value)
+})
+onBeforeUnmount(() => resizeObserver?.disconnect())
 
 function spin() {
   if (spinning.value || props.names.length < 2) return
@@ -93,30 +107,34 @@ function spin() {
 
 <template>
   <div class="flex flex-col items-center gap-5">
-    <div class="relative" :style="{ width: size + 'px', height: size + 'px' }">
-      <div
-        class="absolute left-1/2 top-[-6px] z-10 h-0 w-0 -translate-x-1/2"
-        style="
-          border-left: 12px solid transparent;
-          border-right: 12px solid transparent;
-          border-top: 20px solid var(--foreground);
-        "
-      />
-      <canvas
-        ref="canvasRef"
-        :width="size"
-        :height="size"
-        class="rounded-full border-4 border-border shadow-md"
-        :style="{
-          transform: `rotate(${rotation}deg)`,
-          transition: transitionEnabled
-            ? 'transform 4.1s cubic-bezier(0.17, 0.87, 0.15, 1)'
-            : 'none',
-        }"
-      />
-      <div
-        class="absolute left-1/2 top-1/2 size-8 -translate-x-1/2 -translate-y-1/2 rounded-full border-4 border-background bg-foreground shadow"
-      />
+    <div ref="measureRef" class="w-full max-w-[560px]">
+      <div class="relative mx-auto" :style="{ width: size + 'px', height: size + 'px' }">
+        <div
+          class="absolute left-1/2 top-[-6px] z-10 h-0 w-0 -translate-x-1/2"
+          style="
+            border-left: 12px solid transparent;
+            border-right: 12px solid transparent;
+            border-top: 20px solid var(--foreground);
+          "
+        />
+        <canvas
+          ref="canvasRef"
+          :width="size"
+          :height="size"
+          class="rounded-full border-4 border-border shadow-md"
+          :style="{
+            width: size + 'px',
+            height: size + 'px',
+            transform: `rotate(${rotation}deg)`,
+            transition: transitionEnabled
+              ? 'transform 4.1s cubic-bezier(0.17, 0.87, 0.15, 1)'
+              : 'none',
+          }"
+        />
+        <div
+          class="absolute left-1/2 top-1/2 size-8 -translate-x-1/2 -translate-y-1/2 rounded-full border-4 border-background bg-foreground shadow"
+        />
+      </div>
     </div>
 
     <Button size="lg" :disabled="names.length < 2 || spinning" @click="spin">
